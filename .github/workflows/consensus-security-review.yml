@@ -1,7 +1,65 @@
 name: consensus-security-review
+  on:
+    workflow_dispatch:
+      inputs:
+        mode:
+          description: 'Scope: commit (latest/specific) | pr (latest/specific) | start-commit (cumulative)'
+          type: choice
+          options: [commit, pr, start-commit]
+          default: commit
+        target:
+          description: 'commit SHA or PR URL/number. Empty = latest commit / latest open PR.'
+          type: string
+          required: false
+        branch:
+          description: 'Branch (commit & start-commit modes)'
+          type: string
+          default: unstable
+        start-commit:
+          description: 'Baseline SHA (start-commit mode only)'
+          type: string
+          required: false
+        hardfork:
+          description: 'Hardfork for EIP context'
+          type: choice
+          options: [none, fusaka, pectra, dencun, glamsterdam]
+          default: none
+        prompt:defaulted to unstable:
+
+name: consensus-security-review
 on:
-  pull_request:
-    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Scope: commit (latest/specific) | pr (latest/specific) | start-commit (cumulative)'
+        type: choice
+        options: [commit, pr, start-commit]
+        default: commit
+      target:
+        description: 'commit SHA or PR URL/number. Empty = latest commit / latest open PR.'
+        type: string
+        required: false
+      branch:
+        description: 'Branch (commit & start-commit modes)'
+        type: string
+        default: unstable
+      start-commit:
+        description: 'Baseline SHA (start-commit mode only)'
+        type: string
+        required: false
+      hardfork:
+        description: 'Hardfork for EIP context'
+        type: choice
+        options: [none, fusaka, pectra, dencun, glamsterdam]
+        default: none
+      prompt:
+        description: 'Extra reviewer notes'
+        type: string
+        required: false
+      strict-specs:
+        description: 'Fail if fork EIPs cannot all be fetched'
+        type: boolean
+        default: false
 jobs:
   consensus-security-review:
     runs-on: ubuntu-latest
@@ -11,3 +69,42 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           agent-file: agents/consensus-layer/AGENTS.md
+          repository: ${{ github.repository }}
+          mode: ${{ inputs.mode }}
+          target: ${{ inputs.target }}
+          branch: ${{ inputs.branch }}
+          start-commit: ${{ inputs.start-commit }}
+          hardfork: ${{ inputs.hardfork == 'none' && '' || inputs.hardfork }}
+          prompt: ${{ inputs.prompt }}
+          post-comment: 'false'
+          strict-specs: ${{ inputs.strict-specs }}
+          description: 'Extra reviewer notes'
+          type: string
+          required: false
+        strict-specs:
+          description: 'Fail if fork EIPs cannot all be fetched'
+          type: boolean
+          default: false
+  jobs:
+    consensus-security-review:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: protocol-security/ethereum-code-reviewer@v2
+          with:
+            github-token: ${{ secrets.GITHUB_TOKEN }}
+            claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+            agent-file: agents/consensus-layer/AGENTS.md
+            repository: ${{ github.repository }}
+            mode: ${{ inputs.mode }}
+            target: ${{ inputs.target }}
+            branch: ${{ inputs.branch }}
+            start-commit: ${{ inputs.start-commit }}
+            hardfork: ${{ inputs.hardfork == 'none' && '' || inputs.hardfork }}
+            prompt: ${{ inputs.prompt }}
+            post-comment: 'false'
+            strict-specs: ${{ inputs.strict-specs }}
+
+  Notes:
+  - post-comment: 'false' so test runs print findings in the Actions log without commenting — flip to 'true' when ready.
+  - Run it from Actions → consensus-security-review → Run workflow: leave target empty for latest commit/PR, or fill it for a specific one; for start-commit mode set start-commit (+ hardfork: fusaka).
+  - Requires the CLAUDE_CODE_OAUTH_TOKEN secret (and the action being resolvable from the test repo — same-org).
