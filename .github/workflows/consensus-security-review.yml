@@ -1,0 +1,13 @@
+name: consensus-security-review
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  consensus-security-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: protocol-security/ethereum-code-reviewer@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          agent-file: agents/consensus-layer/AGENTS.md
